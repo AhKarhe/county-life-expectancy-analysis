@@ -63,6 +63,28 @@ We find that Median_income, Adult_smoking, physical_inactivity, , diabetes_preva
 Specifically, only Median_income is positive correlated to Life_expectancy and others are negatively correlated.
 
 Next we need to find the correlation between the predictors.
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, fig.width=10, fig.height=8}
+cor_mat <- cor(train_dat[, num_vars])
+cor_long <- cor_mat %>%
+  as.data.frame() %>%
+  rownames_to_column(var = "var1") %>%
+  pivot_longer(-var1, names_to = "var2", values_to = "corr") %>%
+  mutate(var1 = factor(var1, levels = colnames(cor_mat)),
+         var2 = factor(var2, levels = rev(colnames(cor_mat))))
+
+ggplot(cor_long, aes(var1, var2, fill = corr)) +
+  geom_tile(color = "white", linewidth = 0.5) +
+  geom_text(data = filter(cor_long, abs(corr) >= 0.7),
+            aes(label = round(corr, 2)), size = 3) +
+  scale_fill_gradient2(low = "#4575b4", mid = "white", high = "#d73027",
+                       midpoint = 0, name = "Correlation") +
+  labs(x = NULL, y = NULL, title = "Correlation heatmap of numerical predictors") +
+  theme_minimal(base_size = 11) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        panel.grid = element_blank())
+```
+
 ```{r, message=FALSE, echo=FALSE}
 cor_mat <- cor(train_dat[, num_vars])
 high_cor <- which(abs(cor_mat) > 0.7 & lower.tri(cor_mat), arr.ind = TRUE)
@@ -223,7 +245,7 @@ vif_values[vif_values > 5]
 # Diagnostic Summary
 
 The diagnostic plots suggest that the model assumptions are largely reasonable. Based on the plots, the linearity is not a obvious problem since the curve is relatively flat. The Shapiro-Wilk test shows that p = 0.07603633 so normality is not a concern. 
-No high influential points with Cook’s distance > 1.
+No high influential points with Cook's distance > 1.
 The p value of Breusch-Pagan test is 1.91129e-07 so heteroscedasticity would be an issue.
 The multicollinearity problem is not really an issue since there are only one predictors larger than 5. Multicollinearity problem can be address later when reducing the number of variables in model comparison part.
 
