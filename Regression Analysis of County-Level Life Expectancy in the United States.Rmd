@@ -51,6 +51,11 @@ The Only categorical variable is 'state', which includes all states in the US an
 For numerical variables, we need to find out their correlation with Life Expectancy:
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
+num_vars <- names(train_dat)[sapply(train_dat, is.numeric)]
+num_vars <- setdiff(num_vars, "life_expectancy")
+cors <- sapply(train_dat[, num_vars], function(x) cor(x, train_dat$life_expectancy))
+cors_df <- data.frame(variable = names(cors), correlation = cors) %>%
+  arrange(desc(abs(correlation)))
 plots <- lapply(num_vars, function(x) {
   ggplot(train_dat, aes_string(x = x, y = "life_expectancy")) +
     geom_point(alpha = 0.6) +
@@ -61,11 +66,6 @@ wrap_plots(plots, ncol = 3)
 ```
 
 ```{r, echo=FALSE}
-num_vars <- names(train_dat)[sapply(train_dat, is.numeric)]
-num_vars <- setdiff(num_vars, "life_expectancy")
-cors <- sapply(train_dat[, num_vars], function(x) cor(x, train_dat$life_expectancy))
-cors_df <- data.frame(variable = names(cors), correlation = cors) %>%
-  arrange(desc(abs(correlation)))
 knitr::kable(cors_df, digits = 3, caption = "Marginal correlations with life expectancy", row.names = F)
 ```
 
