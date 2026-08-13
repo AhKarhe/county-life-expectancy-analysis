@@ -107,19 +107,27 @@ if (nrow(high_cor) > 0) {
 }
 ```
 
-We find the pairs like physical_inactivity and food_insecurity, adult_smoking	and median_income are highly correlated with each other.
+We find eight pairs of predictors like physical_inactivity and food_insecurity, adult_smoking	and median_income are highly correlated with each other.
 
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+dens_plots <- lapply(num_vars, function(x) {
+  ggplot(train_dat, aes_string(x = x)) +
+    geom_density(fill = "steelblue", alpha = 0.6) +
+    theme_minimal()
+})
+wrap_plots(dens_plots, ncol = 3)
+```
 
-
-I don't see any nonlinearity among these predictors based on this scatter plot.
-Unemployment, disconnected_youth, pm25 and primary_care_physicians are seemed right skewed.
-Outliers can be seen from this scatter plot.
+No nonlinearity can be seen among these predictors based on the scatter plot. \n
+Unemployment, disconnected_youth, pm25, median_income and primary_care_physicians are seemed right skewed. \n
+homeownership, adult_obesity, insufficient_sleep are left skewed. \n
+Outliers can be seen from the scatter plot.
 
 ## Decision Note:
 
-by EDA we can say that, first, predictors like physical_inactivity, adult_smoking, adult_obesity and median_income have the strong marginal associations with life expectancy.
-Second, some predictors have correlations with each other.
-Third, we can say that there are skewness of some predictors and outliers, but we can't confirm nonlinearity just based on scatter plot.
+by EDA we can say that, first, five predictors, physical_inactivity, adult_smoking, food_insecurity, diabetes_prevalence and median_income, have the strong marginal associations with life expectancy. \n
+Second, eight pairs of  predictors have correlations with each other.
+Third, we can say that there are skewness of some predictors and outliers, but we can't confirm nonlinearity only based on scatter plot.
 
 # Model Building and Diagnostics
 
@@ -145,7 +153,9 @@ So the summary tells us that this model is overall significant with p-value < 2.
 Also, it tells us that unemployment, pm25, primary_care_physicians and homeownership are not significant.
 So here we drop all insignificant predictors.
 ```{r}
-mod1 <- lm(life_expectancy ~ . - unemployment  - pm25 - homeownership - primary_care_physicians, data = train_dat)
+mod1 <- lm(life_expectancy ~ . - unemployment  - pm25 - homeownership - primary_care_physicians, 
+           data = train_dat)
+
 anova(mod0, mod1)$'Pr(>F)'[2]
 ```
 The reduced model obtained by removing the insignificant predictors (unemployment, pm25, primary_care_physicians and homeownership) was compared to the original model. The ANOVA results show that the reduction does
@@ -206,13 +216,12 @@ overlap
 So cook's distance confirms that 203, 508, and 601 are high influential points (Cook's distance > 4/n).
 
 ## Remove Outliers and fit a Model
-```{r, echo=FALSE}
+```{r}
 remove_ids <- c(203, 508, 601)
 train_clean <- train_dat[-remove_ids, ]
-mod2 <- lm(life_expectancy ~ . - unemployment  - pm25 - homeownership - primary_care_physicians, data = train_clean)
-```
+mod2 <- lm(life_expectancy ~ . - unemployment  - pm25 - homeownership - primary_care_physicians, 
+           data = train_clean)
 
-```{r}
 summary(mod2)
 ```
 So the summary tells us that after removing outliers the model is overall significant with p-value < 2.2e-16. 11 numerical
