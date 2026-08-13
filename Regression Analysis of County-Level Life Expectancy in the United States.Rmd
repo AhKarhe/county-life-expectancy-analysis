@@ -13,7 +13,7 @@ editor_options:
 
 # Abstract
 
-This report studied the relationship between county level life expectancy in the United States and 15 socioeconomic, behavioral, environmental, and health related predictors using the County Health Rankings dataset. After an exploratory data analysis that confirmed state level differences, we fitted a multiple linear regression model without state. Non significant predictors (unemployment, PM2.5, primary care physicians, homeownership) and three highly influential outliers were removed. A further non significant predictor, gender pay gap, appeared and was dropped, yielding a final model with 10 significant predictors that explains 79.2% of the variation in life expectancy. Heteroscedasticity problem still shows, so inference was based on HC2 robust standard errors. We compared this model with a lasso selected model containing the same number of predictors but one difference. The final model performs slightly better on all criteria: lower cross validation RMSE, lower AIC and BIC, and test RMSE. Diabetes prevalence, median income, severe housing cost burden, food insecurity, and income inequality emerge as the most important predictors. Limitations include the neglect of state effects, untreated mild collinearity, and a lack of exploration of non linear relationships.
+This report studied the relationship between county level life expectancy in the United States and 15 socioeconomic, behavioral, environmental, and health related predictors using the County Health Rankings dataset. After an exploratory data analysis, we fitted a multiple linear regression model without state. Non significant predictors (unemployment, PM2.5, primary care physicians, homeownership) and three highly influential outliers were removed. A further non significant predictor, gender pay gap, appeared and was dropped, yielding a final model with 10 significant predictors that explains 79.2% of the variation in life expectancy. Heteroscedasticity problem still shows, so inference was based on HC2 robust standard errors. We compared this model with a lasso selected model containing the same number of predictors but one difference. The final model performs slightly better on all criteria: lower cross validation RMSE, lower AIC and BIC, and test RMSE. Diabetes prevalence, median income, severe housing cost burden, food insecurity, and income inequality emerge as the most important predictors. Limitations include the neglect of state effects, untreated mild collinearity, and a lack of exploration of non linear relationships.
 
 # Exploratory Data Analysis
 
@@ -92,21 +92,11 @@ I don't see any nonlinearity among these predictors based on this scatter plot.
 Unemployment, disconnected_youth, pm25 and primary_care_physicians are seemed right skewed.
 Outliers can be seen from this scatter plot.
 
-```{r, results='hold'}
-mod_state <- lm(life_expectancy ~ state, data = train_dat)
-anova_state <- anova(mod_state)
-cat("F-statistic:", round(anova_state$`F value`[1], 2), 
-    "  p-value:", format.pval(anova_state$`Pr(>F)`[1]), "\n")
-```
-
-ANOVA confirms state matters.
-
 ## Decision Note:
 
 by EDA we can say that, first, predictors like physical_inactivity, adult_smoking, adult_obesity and median_income have the strong marginal associations with life expectancy.
 Second, some predictors have correlations with each other.
 Third, we can say that there are skewness of some predictors and outliers, but we can't confirm nonlinearity just based on scatter plot.
-Forth, we can confirm that state matters.
 
 # Model Building and Diagnostics
 
@@ -348,7 +338,7 @@ So mod3 is our final choice.
 
 ## Limitations and open questions
 Given there is page limit for this project, we have met following issues.
-First, our model does not include state, even though our EDA confirms state matters.
+First, our model does not include state.
 Second, we did not do a transformation to address heteroscedasticity.
 Third, both models do not address collinearity issue. Thankfully, collinearity is not severe.
 Forth, we did not dive into non-linearity issue.
