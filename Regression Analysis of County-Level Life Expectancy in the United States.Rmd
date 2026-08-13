@@ -96,7 +96,6 @@ ggplot(cor_long, aes(var1, var2, fill = corr)) +
 ```
 
 ```{r, message=FALSE, echo=FALSE}
-cor_mat <- cor(train_dat[, num_vars])
 high_cor <- which(abs(cor_mat) > 0.7 & lower.tri(cor_mat), arr.ind = TRUE)
 if (nrow(high_cor) > 0) {
   high_cor_df <- data.frame(
