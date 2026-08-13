@@ -2,8 +2,8 @@
 title: 'Regression Analysis of County-Level Life Expectancy in the U.S'
 author: Yuda Zhu
 output:
-  pdf_document: 
-    latex_engine: xelatex
+  #pdf_document: 
+  #  latex_engine: xelatex
   html_document: default
 editor_options: 
   markdown: 
@@ -49,6 +49,16 @@ paste("Number of predictors:", ncol(train_dat) - 1)
 The Only categorical variable is 'state', which includes all states in the US and Washington DC.
 
 For numerical variables, we need to find out their correlation with Life Expectancy:
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+plots <- lapply(num_vars, function(x) {
+  ggplot(train_dat, aes_string(x = x, y = "life_expectancy")) +
+    geom_point(alpha = 0.6) +
+    geom_smooth(formula = y~x, method = "lm", se = FALSE, color = "blue") +
+    theme_minimal()
+})
+wrap_plots(plots, ncol = 3) 
+```
 
 ```{r, echo=FALSE}
 num_vars <- names(train_dat)[sapply(train_dat, is.numeric)]
@@ -100,15 +110,7 @@ if (nrow(high_cor) > 0) {
 
 We find the pairs like physical_inactivity and food_insecurity, adult_smoking	and median_income are highly correlated with each other.
 
-```{r, warning=FALSE, message=FALSE, echo=FALSE}
-plots <- lapply(num_vars, function(x) {
-  ggplot(train_dat, aes_string(x = x, y = "life_expectancy")) +
-    geom_point(alpha = 0.6) +
-    geom_smooth(formula = y~x, method = "lm", se = FALSE, color = "blue") +
-    theme_minimal()
-})
-wrap_plots(plots, ncol = 3) 
-```
+
 
 I don't see any nonlinearity among these predictors based on this scatter plot.
 Unemployment, disconnected_youth, pm25 and primary_care_physicians are seemed right skewed.
