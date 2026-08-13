@@ -1,0 +1,369 @@
+---
+title: 'Regression Analysis of County-Level Life Expectancy in the U.S'
+author: Yuda Zhu
+output:
+  pdf_document: 
+    latex_engine: xelatex
+  html_document: default
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+
+# Abstract
+
+This report studied the relationship between county level life expectancy in the United States and 15 socioeconomic, behavioral, environmental, and health related predictors using the County Health Rankings dataset. After an exploratory data analysis that confirmed state level differences, we fitted a multiple linear regression model without state. Non significant predictors (unemployment, PM2.5, primary care physicians, homeownership) and three highly influential outliers were removed. A further non significant predictor, gender pay gap, appeared and was dropped, yielding a final model with 10 significant predictors that explains 79.2% of the variation in life expectancy. Heteroscedasticity problem still shows, so inference was based on HC2 robust standard errors. We compared this model with a lasso selected model containing the same number of predictors but one difference. The final model performs slightly better on all criteria: lower cross validation RMSE, lower AIC and BIC, and test RMSE. Diabetes prevalence, median income, severe housing cost burden, food insecurity, and income inequality emerge as the most important predictors. Limitations include the neglect of state effects, untreated mild collinearity, and a lack of exploration of non linear relationships.
+
+# Exploratory Data Analysis
+
+Set seed, import packages and data set:
+
+```{r, warning= FALSE, message=FALSE}
+group_seed <- 29
+library(tidyverse)
+library(lmtest)
+library(caret)
+library(glmnet)
+library(leaps)
+library(MASS)
+library(faraway)
+library(patchwork)
+dat <- read.csv("County_Health_Rankings_county_level_data.csv")
+dat <- dat[-1, ]
+```
+
+Split the data and check sizes:
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+set.seed(group_seed)
+n <- nrow(dat)
+train_id <- sample(seq_len(n), size = round(0.8 * n))
+train_dat <- dat[train_id, ]
+test_dat  <- dat[-train_id, ]
+paste("Training set sample size:", nrow(train_dat))
+paste("Test set sample size:", nrow(test_dat))
+paste("Number of predictors:", ncol(train_dat) - 1)
+```
+
+The Only categorical variable is 'state', which includes all states in the US and Washington DC.
+
+For numerical variables, we need to find out their correlation with Life Expectancy:
+
+```{r, echo=FALSE}
+num_vars <- names(train_dat)[sapply(train_dat, is.numeric)]
+num_vars <- setdiff(num_vars, "life_expectancy")
+cors <- sapply(train_dat[, num_vars], function(x) cor(x, train_dat$life_expectancy))
+cors_df <- data.frame(variable = names(cors), correlation = cors) %>%
+  arrange(desc(abs(correlation)))
+knitr::kable(cors_df, digits = 3, caption = "Marginal correlations with life expectancy", row.names = F)
+```
+
+We find that Median_income, Adult_smoking, physical_inactivity, , diabetes_prevalence, food_insecurity are highly correlated to life_expectancy (\|r\| \> 0.7).
+Specifically, only Median_income is positive correlated to Life_expectancy and others are negatively correlated.
+
+Next we need to find the correlation between the predictors.
+```{r, message=FALSE, echo=FALSE}
+cor_mat <- cor(train_dat[, num_vars])
+high_cor <- which(abs(cor_mat) > 0.7 & lower.tri(cor_mat), arr.ind = TRUE)
+if (nrow(high_cor) > 0) {
+  high_cor_df <- data.frame(
+    Variable1 = rownames(cor_mat)[high_cor[,1]],
+    Variable2 = colnames(cor_mat)[high_cor[,2]],
+    Correlation = cor_mat[high_cor]
+  )
+  knitr::kable(high_cor_df, digits = 3, caption = "Some of highly correlated predictors are shown on this table with |r| > 0.7")
+}
+```
+
+We find the pairs like physical_inactivity and food_insecurity, adult_smoking	and median_income are highly correlated with each other.
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+plots <- lapply(num_vars, function(x) {
+  ggplot(train_dat, aes_string(x = x, y = "life_expectancy")) +
+    geom_point(alpha = 0.6) +
+    geom_smooth(formula = y~x, method = "lm", se = FALSE, color = "blue") +
+    theme_minimal()
+})
+wrap_plots(plots, ncol = 3) 
+```
+
+I don't see any nonlinearity among these predictors based on this scatter plot.
+Unemployment, disconnected_youth, pm25 and primary_care_physicians are seemed right skewed.
+Outliers can be seen from this scatter plot.
+
+```{r, results='hold'}
+mod_state <- lm(life_expectancy ~ state, data = train_dat)
+anova_state <- anova(mod_state)
+cat("F-statistic:", round(anova_state$`F value`[1], 2), 
+    "  p-value:", format.pval(anova_state$`Pr(>F)`[1]), "\n")
+```
+
+ANOVA confirms state matters.
+
+## Decision Note:
+
+by EDA we can say that, first, predictors like physical_inactivity, adult_smoking, adult_obesity and median_income have the strong marginal associations with life expectancy.
+Second, some predictors have correlations with each other.
+Third, we can say that there are skewness of some predictors and outliers, but we can't confirm nonlinearity just based on scatter plot.
+Forth, we can confirm that state matters.
+
+# Model Building and Diagnostics
+
+We chose to drop state variable and do MLR,
+
+```{r}
+train_dat$state <- NULL
+test_dat$state <- NULL # here we just remove state column from both train and test data
+```
+
+```{r, echo=FALSE}
+rownames(train_dat) <- NULL
+rownames(test_dat) <- NULL
+```
+
+```{r}
+mod0 <- lm(life_expectancy ~., data = train_dat) # Fit MLR with all numeric variables
+summary(mod0)
+```
+
+So the summary tells us that this model is overall significant with p-value < 2.2e-16.
+15 numerical predictors explained about 77.3% of Life expectancy.
+Also, it tells us that unemployment, pm25, primary_care_physicians and homeownership are not significant.
+So here we drop all insignificant predictors.
+```{r}
+mod1 <- lm(life_expectancy ~ . - unemployment  - pm25 - homeownership - primary_care_physicians, data = train_dat)
+anova(mod0, mod1)$'Pr(>F)'[2]
+```
+The reduced model obtained by removing the insignificant predictors (unemployment, pm25, primary_care_physicians and homeownership) was compared to the original model. The ANOVA results show that the reduction does
+not significantly worsen model fit (p = 0.3275). Therefore, the simpler model is preferred for its
+improved interpretability.
+
+Here we find high leverage points.
+
+```{r, echo=FALSE}
+lev <- influence(mod1)$hat
+p   <- length(coef(mod1))      # number of coefficients (with intercept)
+n   <- nrow(train_dat)
+```
+
+```{r}
+cutoff_leverage <- 2 * p / n # Rule of thumb: 2p/n
+high_lev <- which(lev > cutoff_leverage)
+```
+```{r, echo=FALSE}
+cat("There are", length(high_lev), "high leverage points")   # number of high-leverage points
+```
+
+```{r,results='hold', echo=FALSE}
+stud_res <- rstudent(mod1)
+threshold <- abs(qt(1 - 0.05/(2 * n), df = n - p - 1))
+outliers <- which(abs(stud_res) > threshold) # Observations flagged as outliers
+```
+
+```{r, results='hold'}
+cat("Potential outliers:\n")
+print(data.frame(stud_res = stud_res[outliers]))
+```
+So we find three outliers: 203, 508, 601.
+
+Here we are testing whether outliers are also high leverage points.
+
+```{r}
+overlap <- intersect(high_lev, outliers)
+overlap 
+```
+
+This confirms outliers we found are also high leverage points.
+
+Here we are going to find high influential points using cook's distance
+
+```{r, results='hold', echo=FALSE}
+cook <- cooks.distance(mod1)
+```
+
+```{r}
+overlap <- intersect(overlap, which(cook > 4/n))
+```
+
+```{r, echo=FALSE}
+overlap
+```
+
+So cook's distance confirms that 203, 508, and 601 are high influential points (Cook's distance > 4/n).
+
+## Remove Outliers and fit a Model
+```{r, echo=FALSE}
+remove_ids <- c(203, 508, 601)
+train_clean <- train_dat[-remove_ids, ]
+mod2 <- lm(life_expectancy ~ . - unemployment  - pm25 - homeownership - primary_care_physicians, data = train_clean)
+```
+
+```{r}
+summary(mod2)
+```
+So the summary tells us that after removing outliers the model is overall significant with p-value < 2.2e-16. 11 numerical
+predictors explained about 79.3% of Life expectancy. Also, it tells us that gender_pay_gap is no longer significant after removing outliers.
+
+```{r, results='hold'}
+mod3 <- lm(life_expectancy ~ . - unemployment  - pm25 - homeownership 
+           - primary_care_physicians -gender_pay_gap, data = train_clean)
+cat("So it's safe to drop gender_pay_gap since p value is", anova(mod2, mod3)$'Pr(>F)'[2])
+```
+
+```{r}
+summary(mod3)
+```
+So the summary tells us that after removing gender_pay_gap the model is overall significant with p-value < 2.2e-16.
+10 numerical predictors explained about 79.2% of Life expectancy.
+
+Plots of mod3
+
+```{r, echo=FALSE, results='hold'}
+par(mfrow = c(2,2))
+plot(mod3)
+resi <- residuals(mod3)
+cat("shapiro p value:", shapiro.test(resi)$p, "\n")
+cat("cook's distance:",length(which(cooks.distance(mod3) > 1)),"\n")
+cat("bptest p value:", bptest(mod3)$p.value,"\n")
+vif_values <- vif(mod3)
+vif_values[vif_values > 5]
+```
+
+# Diagnostic Summary
+
+The diagnostic plots suggest that the model assumptions are largely reasonable. Based on the plots, the linearity is not a obvious problem since the curve is relatively flat. The Shapiro-Wilk test shows that p = 0.07603633 so normality is not a concern. 
+No high influential points with Cook’s distance > 1.
+The p value of Breusch-Pagan test is 1.91129e-07 so heteroscedasticity would be an issue.
+The multicollinearity problem is not really an issue since there are only one predictors larger than 5. Multicollinearity problem can be address later when reducing the number of variables in model comparison part.
+
+Here we do HC standard errors to address heteroscedasticity issue.
+```{r, warning=FALSE, message=FALSE}
+library(sandwich)
+robust_se <- coeftest(mod3, vcov = vcovHC(mod3, type = "HC2"))
+knitr::kable(robust_se[,], caption = "HC2 robust coefficient tests")
+```
+
+# Model Comparison
+
+So we fit model3(mod3) by removing state and other predictors, removing outliers, removing gender_pay_gap. Basically what we did was manual variable selection. So for this part we choose to reduce the model by shrinkage, specifically using lasso.
+```{r}
+X_clean <- model.matrix(life_expectancy ~ . , data = train_clean)[, -1]
+y_clean <- train_clean$life_expectancy
+set.seed(group_seed)
+cv_lasso <- cv.glmnet(X_clean, y_clean, alpha = 1, nfolds = 10)
+```
+
+```{r, echo=FALSE}
+cat("lambda.min:", cv_lasso$lambda.min, "\n")
+cat("lambda.1se:", cv_lasso$lambda.1se, "\n")
+lassomin_coef <- coef(cv_lasso, s = "lambda.min")
+selected_varsmin <- rownames(lassomin_coef)[lassomin_coef[,1] != 0][-1]  
+lasso1se_coef <- coef(cv_lasso, s = "lambda.1se")
+selected_vars1se <- rownames(lasso1se_coef)[lasso1se_coef[,1] != 0][-1]  
+cat("The number of predictors left of lasso model(lambda.min) is", length(selected_varsmin),"\n")
+cat("The number of predictors left of lasso model(lambda.1se) is", length(selected_vars1se))
+```
+Since our mod3 has 10 predictors, we here use lambda.1se so that our lasso model also has 10 predictors.
+
+Following are predictors that both models have:
+```{r, echo=FALSE}
+mod3_preds <- names(coef(mod3))[-1]
+lasso_preds <- selected_vars1se
+common <- intersect(mod3_preds, lasso_preds)
+only_mod3 <- setdiff(mod3_preds, lasso_preds)
+only_lasso <- setdiff(lasso_preds, mod3_preds)
+common
+cat("Only in mod3:", if(length(only_mod3)) paste(only_mod3, collapse = ", ") else "none", "\n")
+cat("Only in lasso:", if(length(only_lasso)) paste(only_lasso, collapse = ", ") else "none")
+```
+
+```{r, echo=FALSE}
+set.seed(group_seed)
+ctrl <- trainControl(method = "cv", number = 10)
+cv_ols <- train(life_expectancy ~ . - unemployment - pm25 - homeownership - primary_care_physicians 
+                - gender_pay_gap,
+  data   = train_clean,
+  method = "lm",
+  trControl = ctrl
+)
+form_lasso <- as.formula(paste("life_expectancy ~", paste(selected_vars1se, collapse = " + ")))
+mod_lasso <- lm(form_lasso, data = train_clean)
+AIC = AIC(mod3, mod_lasso)$AIC
+BIC = BIC(mod3, mod_lasso)$BIC
+model_comparison <- data.frame(
+  Model = c("mod3", "mod_lasso"),
+  CV_RMSE = c(cv_ols$results$RMSE,
+              sqrt(cv_lasso$cvm[cv_lasso$lambda == cv_lasso$lambda.1se])),
+  Adj_R2 = c(summary(mod3)$adj.r.squared,
+             summary(mod_lasso)$adj.r.squared),
+  AIC = trunc(AIC(mod3, mod_lasso)$AIC),
+  BIC = trunc(BIC(mod3, mod_lasso)$BIC)
+)
+
+knitr::kable(model_comparison, digits = 3, 
+             caption = "Model comparison metrics (CV RMSE, adjusted R^2, AIC, BIC)")
+```
+We compared mod3 (backward selection: 10 predictors including physical_inactivity) and mod_lasso (LASSO with λ1se: 10 predictors, swapping physical_inactivity for gender_pay_gap) using four criteria: 10-fold CV RMSE, adjusted R^2, AIC, and BIC. As shown in Table 4, mod3 has a slightly lower CV RMSE (1.412 vs. 1.437), slightly higher adjusted R^2 (0.792 vs. 0.791), and lower AIC (3258 vs. 3264) and BIC (3316 vs. 3322). mod3 is favored on every metric. We therefore select mod3 as our final model. 
+
+# Conclusion and discussion
+
+In conclusion, our **final model** for this dataset is mod3, that is Life expectancy ~ median_income, income_inequality, disconnected_youth, adult_smoking, physical_inactivity, adult_obesity, diabetes_prevalence, food_insecurity, insufficient_sleep, severe_housing_cost_burden. 
+
+
+```{r, echo=FALSE}
+knitr::kable(robust_se[,], caption = "HC2 robust coefficient tests")
+```
+
+## Which variables appear to be important?
+
+Based on the HC2 robust inference, all 10 predictors in `mod3` are statistically significant at the 0.05 level. Based on t-values, the five most important predictors are: **`diabetes_prevalence`**($t = -7.62$), **`median_income`** ($t = 8.00$), **`severe_housing_cost_burden`** ($t = 7.09$), **`food_insecurity`** ($t = -6.50$), **`income_inequality`** ($t = -5.87$)
+
+## Interpretation of important numerical predictors
+
+We interpret the five key coefficients from the final model (HC2 robust standard errors). 
+- **`diabetes_prevalence`** ($\hat{\beta} = -43.633$): A 1 percentage point increase in diabetes prevalence is associated with a decrease of about $43.633 \times 0.01 \approx 0.436$ years in average life expectancy 
+- **`median_income`** ($\hat{\beta} = 0.0000452$): A \$10,000 increase in county median income is associated with an increase of approximately $0.0000452 \times 10000 = 0.452$ years in average life expectancy.
+- **`severe_housing_cost_burden`** ($\hat{\beta} = 15.986$): A 1 percentage point increase in severe housing cost burden is associated with an increase of about $15.986 \times 0.01 \approx 0.16$ years. This could be bacause counties with high housing costs tend to be urban areas with better healthcare access.
+- **`food_insecurity`** ($\hat{\beta} = -22.327$): A 1 percentage point increase in food insecurity is associated with a decrease of about $22.327 \times 0.01 \approx 0.223$ years in average life expectancy.
+- **`income_inequality`** ($\hat{\beta} = -0.702$): A one-unit increase in the income inequality ratio is associated with a decrease of about 0.702 years in average life expectancy.
+
+## Test RMSE
+
+```{r, echo=FALSE}
+pred_mod3    <- predict(mod3, newdata = test_dat)
+pred_lasso   <- predict(mod_lasso, newdata = test_dat)
+rmse_mod3    <- sqrt(mean((test_dat$life_expectancy - pred_mod3)^2))
+rmse_lasso   <- sqrt(mean((test_dat$life_expectancy - pred_lasso)^2))
+test_error_df <- data.frame(
+  Model = c("mod3 (final)", "mod_lasso"),
+  `Test RMSE` = c(rmse_mod3, rmse_lasso)
+)
+knitr::kable(test_error_df, digits = 4, 
+             caption = "Test set prediction errors (in years)")
+```
+
+The test RMSE for our final model (mod3) is smaller, which favors mod3 and is consistent with the earlier comparison. Thus, the model selected by manual backward elimination performs at least slightly better than the lasso‑guided model. 
+So mod3 is our final choice.
+
+## Limitations and open questions
+Given there is page limit for this project, we have met following issues.
+First, our model does not include state, even though our EDA confirms state matters.
+Second, we did not do a transformation to address heteroscedasticity.
+Third, both models do not address collinearity issue. Thankfully, collinearity is not severe.
+Forth, we did not dive into non-linearity issue.
+Fifth, we did not do another high leverage point, outlier check for mod3 after we did for mod2 and remove another predictor from it.
+Finally, the predictive error of mod3 is about 1.9, suggesting there are still some unexplained variation for life expectancy.
+
+
+
+
+
+
+
+
+
+
+
+
+
