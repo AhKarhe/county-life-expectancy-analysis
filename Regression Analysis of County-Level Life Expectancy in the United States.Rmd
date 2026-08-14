@@ -239,17 +239,18 @@ summary(mod3)
 So the summary tells us that after removing gender_pay_gap the model is overall significant with p-value < 2.2e-16.
 10 numerical predictors explained about 79.2% of Life expectancy.
 
-Plots of mod3
+Diagnostic plots and tests of mod3
 
 ```{r, echo=FALSE, results='hold'}
 par(mfrow = c(2,2))
 plot(mod3)
 resi <- residuals(mod3)
-cat("shapiro p value:", shapiro.test(resi)$p, "\n")
-cat("cook's distance:",length(which(cooks.distance(mod3) > 1)),"\n")
-cat("bptest p value:", bptest(mod3)$p.value,"\n")
+cat("Shapiro-Wilk normality test p-value (H0: normal):", shapiro.test(resi)$p, "\n")
+cat("Count of Cook's distance > 1:", length(which(cooks.distance(mod3) > 1)), "\n")
+cat("Breusch-Pagan heteroscedasticity test p-value (H0: homoscedastic):", bptest(mod3)$p.value, "\n")
 vif_values <- vif(mod3)
-vif_values[vif_values > 5]
+cat("Predictors with VIF > 5:\n")
+print(vif_values[vif_values > 5])
 ```
 
 # Diagnostic Summary
