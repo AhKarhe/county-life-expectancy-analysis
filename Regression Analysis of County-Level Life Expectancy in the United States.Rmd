@@ -2,8 +2,8 @@
 title: 'Regression Analysis of County-Level Life Expectancy in the U.S'
 author: Yuda Zhu
 output:
-  #pdf_document: 
-  #  latex_engine: xelatex
+  pdf_document: 
+    latex_engine: xelatex
   html_document: default
 editor_options: 
   markdown: 
@@ -245,17 +245,18 @@ Diagnostic plots and tests of mod3
 par(mfrow = c(2,2))
 plot(mod3)
 resi <- residuals(mod3)
+cat("Raintest p-value (H0: linear):", raintest(mod3)$p.value, "\n")
 cat("Shapiro-Wilk normality test p-value (H0: normal):", shapiro.test(resi)$p, "\n")
 cat("Count of Cook's distance > 1:", length(which(cooks.distance(mod3) > 1)), "\n")
 cat("Breusch-Pagan heteroscedasticity test p-value (H0: homoscedastic):", bptest(mod3)$p.value, "\n")
 vif_values <- vif(mod3)
-cat("Predictors with VIF > 5:\n")
+cat("Predictors with VIF > 5: ")
 print(vif_values[vif_values > 5])
 ```
 
 # Diagnostic Summary
 
-The diagnostic plots suggest that the model assumptions are largely reasonable. Based on the plots, the linearity is not a obvious problem since the curve is relatively flat. The Shapiro-Wilk test shows that p = 0.07603633 so normality is not a concern. 
+The diagnostic plots suggest that the model assumptions are reasonable. Based on the plots, the linearity is not a obvious problem since the curve is relatively flat. And raintest(0.7214794) proves linearity. The Shapiro-Wilk test shows that p = 0.07603633 so normality is not a concern. 
 No high influential points with Cook's distance > 1.
 The p value of Breusch-Pagan test is 1.91129e-07 so heteroscedasticity would be an issue.
 The multicollinearity problem is not really an issue since there are only one predictors larger than 5. Multicollinearity problem can be address later when reducing the number of variables in model comparison part.
