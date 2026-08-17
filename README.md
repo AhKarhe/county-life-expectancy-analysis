@@ -1,6 +1,6 @@
 # Regression Analysis of County-Level Life Expectancy in the United States
 
-A STAT 425 (UIUC) final project exploring which socioeconomic, behavioral, environmental, and health-related factors drive life expectancy at the county level, using the **County Health Rankings** dataset.
+A project exploring which socioeconomic, behavioral, environmental, and health-related factors drive life expectancy at the county level, using the **County Health Rankings** dataset.
 
 **Final model**: multiple linear regression with 10 predictors — **adjusted R² = 0.792**, test RMSE = 1.876 years.
 
