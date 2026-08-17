@@ -6,3 +6,9 @@
 # Output files
 *.html
 *.pdf
+
+# Knit artifacts
+*.log
+*.tex
+*_files/
+Regression-Analysis-of-County-Level-Life-Expectancy-in-the-United-States.md
