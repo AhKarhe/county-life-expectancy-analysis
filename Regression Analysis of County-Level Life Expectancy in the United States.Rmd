@@ -392,6 +392,23 @@ Forth, although the raintest and scatter plots support linearity, we did not exp
 Fifth, we re-checked mod3 for high leverage points and outliers: no outliers and no points with Cook's distance > 1 were found, though 50 high-leverage points were identified; we chose not to remove them as they do not materially affect coefficient inference.
 Finally, the predictive error of mod3 is about 1.9, suggesting there are still some unexplained variation for life expectancy.
 
+## Additional Regression Method
+
+To further validate our findings, we also fitted a random forest, a non-parametric method that automatically captures nonlinearities and interactions, and is robust to collinearity, skewness, and outliers. The 10-fold CV RMSE and test RMSE are compared with the linear models below.
+
+```{r, warning=FALSE, message=FALSE}
+library(randomForest)
+set.seed(group_seed)
+ctrl_rf <- trainControl(method = "cv", number = 10)
+cv_rf <- train(life_expectancy ~ ., data = train_clean, method = "rf", trControl = ctrl_rf)
+pred_rf <- predict(cv_rf, newdata = test_dat)
+rmse_rf <- sqrt(mean((test_dat$life_expectancy - pred_rf)^2))
+cat("Random forest CV RMSE:", cv_rf$results$RMSE, "\n")
+cat("Random forest test RMSE:", rmse_rf, "\n")
+```
+
+The random forest achieves a slightly lower CV RMSE (best mtry: 1.320 vs. 1.412 for mod3) and a slightly lower test RMSE (1.862 vs. about 1.876 for mod3), indicating that the flexible model captures only a small amount of structure beyond linearity. The linear model therefore remains competitive while being far more interpretable.
+
 
 
 
