@@ -386,10 +386,10 @@ So mod3 is our final choice.
 ## Limitations and open questions
 Given there is page limit for this project, we have met following issues.
 First, our model does not include state.
-Second, we did not do a transformation to address heteroscedasticity.
+Second, we did not transform the response to directly model the variance structure; instead we mitigated heteroscedasticity by using HC2 robust standard errors for inference.
 Third, we do not directly address the collinearity issue. However, it is mild (only one predictor with VIF > 5), and the lasso comparison model, which handles collinearity by shrinkage, yields nearly identical performance and conclusions, so collinearity does not undermine the robustness of our findings.
-Forth, we did not dive into non-linearity issue.
-Fifth, we did not do another high leverage point, outlier check for mod3 after we did for mod2 and remove another predictor from it.
+Forth, although the raintest and scatter plots support linearity, we did not explore flexible nonlinear forms such as splines or interactions.
+Fifth, we re-checked mod3 for high leverage points and outliers: no outliers and no points with Cook's distance > 1 were found, though 50 high-leverage points were identified; we chose not to remove them as they do not materially affect coefficient inference.
 Finally, the predictive error of mod3 is about 1.9, suggesting there are still some unexplained variation for life expectancy.
 
 
