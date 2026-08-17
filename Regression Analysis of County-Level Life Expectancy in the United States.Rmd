@@ -254,12 +254,25 @@ cat("Predictors with VIF > 5: ")
 print(vif_values[vif_values > 5])
 ```
 
+```{r, results='hold'}
+p3   <- length(coef(mod3))
+n3   <- nrow(train_clean)
+lev3 <- influence(mod3)$hat
+stud_res3 <- rstudent(mod3)
+cutoff3 <- 2 * p3 / n3
+thr3 <- abs(qt(1 - 0.05/(2 * n3), df = n3 - p3 - 1))
+high_lev3 <- which(lev3 > cutoff3)
+outliers3 <- which(abs(stud_res3) > thr3)
+cat("High leverage points of mod3:", if(length(high_lev3)) paste(high_lev3, collapse = ", ") else "none", "\n")
+cat("Outliers of mod3:", if(length(outliers3)) paste(outliers3, collapse = ", ") else "none", "\n")
+```
+
 # Diagnostic Summary
 
 The diagnostic plots suggest that the model assumptions are reasonable. Based on the plots, the linearity is not a obvious problem since the curve is relatively flat. And raintest(0.7214794) proves linearity. The Shapiro-Wilk test shows that p = 0.07603633 so normality is not a concern. 
 No high influential points with Cook's distance > 1.
 The p value of Breusch-Pagan test is 1.91129e-07 so heteroscedasticity would be an issue.
-The multicollinearity problem is not really an issue since there are only one predictors larger than 5. Multicollinearity problem can be address later when reducing the number of variables in model comparison part.
+The multicollinearity problem is not really an issue since there is only one predictor with VIF > 5. Moreover, the lasso model in the model comparison section shrinks correlated predictors, yet selects nearly the same variables with almost identical predictive performance, confirming that collinearity does not affect our conclusions.
 
 Here we do HC standard errors to address heteroscedasticity issue.
 ```{r, warning=FALSE, message=FALSE}
@@ -328,7 +341,7 @@ model_comparison <- data.frame(
 knitr::kable(model_comparison, digits = 3, 
              caption = "Model comparison metrics (CV RMSE, adjusted R^2, AIC, BIC)")
 ```
-We compared mod3 (backward selection: 10 predictors including physical_inactivity) and mod_lasso (LASSO with λ1se: 10 predictors, swapping physical_inactivity for gender_pay_gap) using four criteria: 10-fold CV RMSE, adjusted R^2, AIC, and BIC. As shown in Table 4, mod3 has a slightly lower CV RMSE (1.412 vs. 1.437), slightly higher adjusted R^2 (0.792 vs. 0.791), and lower AIC (3258 vs. 3264) and BIC (3316 vs. 3322). mod3 is favored on every metric. We therefore select mod3 as our final model. 
+We compared mod3 (backward selection: 10 predictors including physical_inactivity) and mod_lasso (LASSO with λ1se: 10 predictors, swapping physical_inactivity for gender_pay_gap) using four criteria: 10-fold CV RMSE, adjusted R^2, AIC, and BIC. As shown in Table 4, mod3 has a slightly lower CV RMSE (1.412 vs. 1.437), slightly higher adjusted R^2 (0.792 vs. 0.791), and lower AIC (3258 vs. 3264) and BIC (3316 vs. 3322). mod3 is favored on every metric. Notably, the only difference between the two models is that lasso replaces physical_inactivity (highly correlated with food_insecurity) with gender_pay_gap, yet performance is nearly identical, which is further evidence that mild collinearity does not affect the analysis. We therefore select mod3 as our final model.
 
 # Conclusion and discussion
 
@@ -374,7 +387,7 @@ So mod3 is our final choice.
 Given there is page limit for this project, we have met following issues.
 First, our model does not include state.
 Second, we did not do a transformation to address heteroscedasticity.
-Third, both models do not address collinearity issue. Thankfully, collinearity is not severe.
+Third, we do not directly address the collinearity issue. However, it is mild (only one predictor with VIF > 5), and the lasso comparison model, which handles collinearity by shrinkage, yields nearly identical performance and conclusions, so collinearity does not undermine the robustness of our findings.
 Forth, we did not dive into non-linearity issue.
 Fifth, we did not do another high leverage point, outlier check for mod3 after we did for mod2 and remove another predictor from it.
 Finally, the predictive error of mod3 is about 1.9, suggesting there are still some unexplained variation for life expectancy.
