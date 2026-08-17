@@ -19,6 +19,15 @@ Using ~1,150 U.S. counties and 15 candidate predictors, the project walks throug
 - The linear model is competitive with flexible methods: it slightly beats lasso on every criterion and is nearly matched by random forest (best CV RMSE 1.32 vs. 1.41), supporting the linearity assumption
 - Inference is based on **HC2 robust standard errors** due to heteroscedasticity
 
+### Interpretation of important numerical predictors
+
+We interpret the five key coefficients from the final model (HC2 robust standard errors). 
+- **`diabetes_prevalence`** ($\hat{\beta} = -43.633$): A 1 percentage point increase in diabetes prevalence is associated with a decrease of about $43.633 \times 0.01 \approx 0.436$ years in average life expectancy 
+- **`median_income`** ($\hat{\beta} = 0.0000452$): A \$10,000 increase in county median income is associated with an increase of approximately $0.0000452 \times 10000 = 0.452$ years in average life expectancy.
+- **`severe_housing_cost_burden`** ($\hat{\beta} = 15.986$): A 1 percentage point increase in severe housing cost burden is associated with an increase of about $15.986 \times 0.01 \approx 0.16$ years. This could be bacause counties with high housing costs tend to be urban areas with better healthcare access.
+- **`food_insecurity`** ($\hat{\beta} = -22.327$): A 1 percentage point increase in food insecurity is associated with a decrease of about $22.327 \times 0.01 \approx 0.223$ years in average life expectancy.
+- **`income_inequality`** ($\hat{\beta} = -0.702$): A one-unit increase in the income inequality ratio is associated with a decrease of about 0.702 years in average life expectancy
+
 ## Repository Contents
 
 | File | Description |
