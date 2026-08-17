@@ -118,14 +118,14 @@ dens_plots <- lapply(num_vars, function(x) {
 wrap_plots(dens_plots, ncol = 3)
 ```
 
-No nonlinearity can be seen among these predictors based on the scatter plot. \n
-Unemployment, disconnected_youth, pm25, median_income and primary_care_physicians are seemed right skewed. \n
-homeownership, adult_obesity, insufficient_sleep are left skewed. \n
+No nonlinearity can be seen among these predictors based on the scatter plot.
+Unemployment, disconnected_youth, pm25, median_income and primary_care_physicians are seemed right skewed.
+homeownership, adult_obesity, insufficient_sleep are left skewed.
 Outliers can be seen from the scatter plot.
 
 ## Decision Note:
 
-by EDA we can say that, first, five predictors, physical_inactivity, adult_smoking, food_insecurity, diabetes_prevalence and median_income, have the strong marginal associations with life expectancy. \n
+by EDA we can say that, first, five predictors, physical_inactivity, adult_smoking, food_insecurity, diabetes_prevalence and median_income, have the strong marginal associations with life expectancy.
 Second, eight pairs of  predictors have correlations with each other.
 Third, we can say that there are skewness of some predictors and outliers, but we can't confirm nonlinearity only based on scatter plot.
 
@@ -269,10 +269,10 @@ cat("Outliers of mod3:", if(length(outliers3)) paste(outliers3, collapse = ", ")
 
 # Diagnostic Summary
 
-The diagnostic plots suggest that the model assumptions are reasonable. Based on the plots, the linearity is not a obvious problem since the curve is relatively flat. And raintest(0.7214794) proves linearity. The Shapiro-Wilk test shows that p = 0.07603633 so normality is not a concern. 
+The diagnostic plots suggest that the model assumptions are reasonable. Based on the plots, the linearity is not a obvious problem since the curve is relatively flat. And raintest(p = 0.7214794) proves linearity. The Shapiro-Wilk test shows that p = 0.07603633 so normality is not a concern. 
 No high influential points with Cook's distance > 1.
 The p value of Breusch-Pagan test is 1.91129e-07 so heteroscedasticity would be an issue.
-The multicollinearity problem is not really an issue since there is only one predictor with VIF > 5. Moreover, the lasso model in the model comparison section shrinks correlated predictors, yet selects nearly the same variables with almost identical predictive performance, confirming that collinearity does not affect our conclusions.
+The multicollinearity problem is not really an issue since there is only one predictor with VIF > 5 (6.697517).
 
 Here we do HC standard errors to address heteroscedasticity issue.
 ```{r, warning=FALSE, message=FALSE}
@@ -396,13 +396,17 @@ Finally, the predictive error of mod3 is about 1.9, suggesting there are still s
 
 To further validate our findings, we also fitted a random forest, a non-parametric method that automatically captures nonlinearities and interactions, and is robust to collinearity, skewness, and outliers. The 10-fold CV RMSE and test RMSE are compared with the linear models below.
 
-```{r, warning=FALSE, message=FALSE}
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
 library(randomForest)
 set.seed(group_seed)
+```
+```{r, warning=FALSE, message=FALSE}
 ctrl_rf <- trainControl(method = "cv", number = 10)
 cv_rf <- train(life_expectancy ~ ., data = train_clean, method = "rf", trControl = ctrl_rf)
 pred_rf <- predict(cv_rf, newdata = test_dat)
 rmse_rf <- sqrt(mean((test_dat$life_expectancy - pred_rf)^2))
+```
+```{r, echo=FALSE}
 cat("Random forest CV RMSE:", cv_rf$results$RMSE, "\n")
 cat("Random forest test RMSE:", rmse_rf, "\n")
 ```
